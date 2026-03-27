@@ -1,0 +1,12 @@
+{
+  "marketplace": {
+    "name": "local-dev",
+    "plugins": [
+      {
+        "name": "aiclair",
+        "source": "./../../",
+        "description": "aiclair community hooks (local dev)"
+      }
+    ]
+  }
+}

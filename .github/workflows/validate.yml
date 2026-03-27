@@ -1,0 +1,39 @@
+name: Validate Hooks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run all tests
+        run: python3 -m pytest packages/ -v
+
+      - name: Validate prompt-improver hook
+        run: python3 scripts/validate-hook.py packages/hooks/prompt-improver/
+
+      - name: Check no external imports in hooks
+        run: |
+          if grep -rn "^import requests\|^import numpy\|^import pandas\|^from requests\|^from numpy\|^from pandas" packages/hooks/; then
+            echo "External dependencies found in hooks — not allowed"
+            exit 1
+          fi
+          echo "No external dependencies found"
