@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from conftest import run_pre_hook, run_post_hook, make_transcript_with_tag, HOOK_SCRIPT
+from conftest import run_pre_hook, run_post_hook, make_transcript_with_star, HOOK_SCRIPT
 
 
 def test_aws_key_in_write_blocked():
@@ -36,8 +36,8 @@ def test_nc_exfil_blocked():
     assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
 
 
-def test_allow_secret_tag_bypasses():
-    transcript = make_transcript_with_tag("[allow-secret]")
+def test_universal_bypass_allows_secret():
+    transcript = make_transcript_with_star()
     output = run_pre_hook("Write", {"file_path": "config.py", "content": "key = 'AKIAIOSFODNN7EXAMPLE'"}, transcript_path=transcript)
     assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
 
@@ -65,3 +65,10 @@ def test_safe_write_allowed():
 def test_edit_new_string_scanned():
     output = run_pre_hook("Edit", {"file_path": "config.py", "old_string": "key = ''", "new_string": "key = 'AKIAIOSFODNN7EXAMPLE'"})
     assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_universal_bypass_allows_post_tool_use():
+    transcript = make_transcript_with_star()
+    output = run_post_hook("Found key: AKIAIOSFODNN7EXAMPLE in output", transcript_path=transcript)
+    # PostToolUse bypass: should allow, not block
+    assert output.get("decision") != "block"

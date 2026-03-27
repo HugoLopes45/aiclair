@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from packages.core.hook import (
     read_tool_input, write_deny, write_allow, write_post_warn, fail_closed
 )
+from packages.core.bypass import check_universal_bypass
 
 # Load sibling _patterns module via importlib to stay stdlib-only in hook.py
 _spec = importlib.util.spec_from_file_location(
@@ -18,7 +19,6 @@ _spec.loader.exec_module(_mod)
 scan_for_secrets = _mod.scan_for_secrets
 scan_for_exfil = _mod.scan_for_exfil
 is_env_example = _mod.is_env_example
-check_allow_tag = _mod.check_allow_tag
 
 
 @fail_closed
@@ -29,6 +29,11 @@ def main():
     tool_input = data.get("tool_input", {})
     transcript_path = data.get("transcript_path", "")
 
+    # Universal bypass gates ALL events
+    if check_universal_bypass(transcript_path):
+        write_allow(event)
+        return
+
     if event == "PostToolUse":
         stdout = data.get("tool_response", {}).get("stdout", "") or ""
         found, msg = scan_for_secrets(stdout)
@@ -38,10 +43,7 @@ def main():
             write_allow("PostToolUse")
         return
 
-    # PreToolUse
-    if check_allow_tag(transcript_path):
-        write_allow()
-        return
+    # PreToolUse logic follows...
 
     if tool_name == "Bash":
         command = tool_input.get("command", "")

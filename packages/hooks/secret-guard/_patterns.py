@@ -92,25 +92,3 @@ def scan_for_exfil(command: str) -> tuple:
     return False, ""
 
 
-def check_allow_tag(transcript_path: str) -> bool:
-    """Return True if [allow-secret] tag is in any user message of the transcript."""
-    if not transcript_path:
-        return False
-    import json
-    from pathlib import Path
-    try:
-        content = Path(transcript_path).read_bytes()[-8192:]
-        for line in content.decode("utf-8", errors="replace").splitlines():
-            if not line.strip():
-                continue
-            try:
-                entry = json.loads(line)
-                if entry.get("role") == "user":
-                    for block in entry.get("content", []):
-                        if isinstance(block, dict) and "[allow-secret]" in block.get("text", ""):
-                            return True
-            except Exception:
-                continue
-    except Exception:
-        pass
-    return False

@@ -26,7 +26,7 @@ def run_pre_hook(tool_name: str, tool_input: dict, transcript_path: str = "") ->
     return json.loads(result.stdout)
 
 
-def run_post_hook(stdout: str) -> dict:
+def run_post_hook(stdout: str, transcript_path: str = "") -> dict:
     stdin_data = json.dumps({
         "hook_event_name": "PostToolUse",
         "tool_name": "Bash",
@@ -34,7 +34,7 @@ def run_post_hook(stdout: str) -> dict:
         "tool_response": {"stdout": stdout, "stderr": ""},
         "cwd": "/tmp",
         "session_id": "test",
-        "transcript_path": "",
+        "transcript_path": transcript_path,
     })
     result = subprocess.run(
         [sys.executable, str(HOOK_SCRIPT)],
@@ -49,6 +49,22 @@ def make_transcript_with_tag(tag: str) -> str:
     entry = _json.dumps({
         "role": "user",
         "content": [{"type": "text", "text": f"do the thing {tag}"}]
+    })
+    f = tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False)
+    f.write(entry + "\n")
+    f.close()
+    return f.name
+
+
+def make_transcript_with_star() -> str:
+    """Create a temp transcript file with a user message starting with '* '."""
+    import json as _json
+    entry = _json.dumps({
+        "type": "user",
+        "message": {
+            "role": "user",
+            "content": [{"type": "text", "text": "* bypass this turn"}],
+        },
     })
     f = tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False)
     f.write(entry + "\n")

