@@ -1,0 +1,53 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "description": "Evaluates prompt clarity and enriches vague prompts",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/packages/adapter_claude_code/hooks/improve-prompt.py || python ${CLAUDE_PLUGIN_ROOT}/packages/adapter_claude_code/hooks/improve-prompt.py",
+            "description": "Run the prompt-improver hook"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "description": "Block destructive Bash commands before execution",
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/packages/adapter_claude_code/hooks/danger-detector.py || python ${CLAUDE_PLUGIN_ROOT}/packages/adapter_claude_code/hooks/danger-detector.py",
+            "description": "danger-detector"
+          }
+        ]
+      },
+      {
+        "description": "Prevent secrets from leaking via file writes or Bash commands",
+        "matcher": "Bash|Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/packages/adapter_claude_code/hooks/secret-guard-pre.py || python ${CLAUDE_PLUGIN_ROOT}/packages/adapter_claude_code/hooks/secret-guard-pre.py",
+            "description": "secret-guard (pre)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "description": "Scan Bash output for leaked secrets",
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/packages/adapter_claude_code/hooks/secret-guard-post.py || python ${CLAUDE_PLUGIN_ROOT}/packages/adapter_claude_code/hooks/secret-guard-post.py",
+            "description": "secret-guard (post)"
+          }
+        ]
+      }
+    ]
+  }
+}
