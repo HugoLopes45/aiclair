@@ -44,7 +44,9 @@ def test_universal_bypass_allows_secret():
 
 def test_post_tool_use_warns():
     output = run_post_hook("Found key: AKIAIOSFODNN7EXAMPLE in output")
-    assert output.get("decision") == "block"
+    hso = output.get("hookSpecificOutput", {})
+    assert hso.get("hookEventName") == "PostToolUse"
+    assert hso.get("permissionDecision") == "block"
 
 
 def test_pem_block_blocked():
@@ -70,5 +72,5 @@ def test_edit_new_string_scanned():
 def test_universal_bypass_allows_post_tool_use():
     transcript = make_transcript_with_star()
     output = run_post_hook("Found key: AKIAIOSFODNN7EXAMPLE in output", transcript_path=transcript)
-    # PostToolUse bypass: should allow, not block
-    assert output.get("decision") != "block"
+    assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
+    assert output["hookSpecificOutput"]["hookEventName"] == "PostToolUse"
