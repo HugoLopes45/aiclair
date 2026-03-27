@@ -1,0 +1,155 @@
+# =============================================================================
+# aiclair — Python open-source project
+# =============================================================================
+
+# -------------------------------------
+# Python
+# -------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+.Python
+python-version
+
+# Distribution / packaging
+dist/
+build/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+MANIFEST
+pip-wheel-metadata/
+share/python-wheels/
+wheelhouse/
+sdist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# -------------------------------------
+# Testing & coverage
+# -------------------------------------
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+coverage/
+htmlcov/
+nosetests.xml
+*.cover
+*.py,cover
+
+# Mutation testing
+.mutmut-cache
+
+# -------------------------------------
+# Type checkers & linters
+# -------------------------------------
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+.ruff_cache/
+
+# -------------------------------------
+# Build tools
+# -------------------------------------
+.cache/
+*.mo
+*.pot
+
+# -------------------------------------
+# Secrets & environment
+# -------------------------------------
+.env
+.env.*
+!.env.example
+.envrc
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# -------------------------------------
+# Editors & IDEs
+# -------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.orig
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# -------------------------------------
+# OS
+# -------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# -------------------------------------
+# Logs & temp files
+# -------------------------------------
+*.log
+logs/
+*.tmp
+*.temp
+.temp/
+tmp/
+
+# -------------------------------------
+# Documentation build
+# -------------------------------------
+docs/_build/
+docs/site/
+site/
+.docusaurus/
+
+# -------------------------------------
+# Node (for tooling only, e.g. mkdocs)
+# -------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.pnpm-debug.log*
+
+# -------------------------------------
+# aiclair-specific
+# -------------------------------------
+# AIDD — fully local, never committed
+aidd_docs/
+
+# Local adapter test outputs
+*.hook-output.json
