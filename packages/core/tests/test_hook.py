@@ -90,10 +90,11 @@ def test_write_post_warn_output(capsys):
     write_post_warn("Output too large", context="Exceeded limit")
     captured = capsys.readouterr()
     data = json.loads(captured.out.strip())
-    assert data["decision"] == "block"
-    assert data["reason"] == "Output too large"
-    assert data["hookSpecificOutput"]["hookEventName"] == "PostToolUse"
-    assert data["hookSpecificOutput"]["additionalContext"] == "Exceeded limit"
+    hso = data["hookSpecificOutput"]
+    assert hso["hookEventName"] == "PostToolUse"
+    assert hso["permissionDecision"] == "block"
+    assert hso["permissionDecisionReason"] == "Output too large"
+    assert hso["additionalContext"] == "Exceeded limit"
 
 
 def test_fail_closed_catches_exception(capsys):

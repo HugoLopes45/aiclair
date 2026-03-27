@@ -6,6 +6,7 @@ Handles stdin/stdout JSON contract for Claude Code UserPromptSubmit hooks.
 import functools
 import json
 import sys
+import traceback
 
 
 def read_prompt() -> str:
@@ -55,7 +56,11 @@ def read_tool_input() -> dict:
     """Read full stdin JSON for PreToolUse/PostToolUse hooks. Returns {} on any error."""
     try:
         return json.load(sys.stdin)
-    except Exception:
+    except json.JSONDecodeError as e:
+        print(f"[aiclair] read_tool_input: malformed JSON on stdin: {e}", file=sys.stderr)
+        return {}
+    except Exception as e:
+        print(f"[aiclair] read_tool_input: unexpected stdin error: {e}", file=sys.stderr)
         return {}
 
 
@@ -82,13 +87,24 @@ def write_allow(event_name: str = "PreToolUse") -> None:
     print(json.dumps(output))
 
 
+def write_post_allow() -> None:
+    """Print PostToolUse allow JSON to stdout."""
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PostToolUse",
+            "permissionDecision": "allow",
+        }
+    }
+    print(json.dumps(output))
+
+
 def write_post_warn(reason: str, context: str = "") -> None:
     """Print PostToolUse block JSON to stdout."""
     output = {
-        "decision": "block",
-        "reason": reason,
         "hookSpecificOutput": {
             "hookEventName": "PostToolUse",
+            "permissionDecision": "block",
+            "permissionDecisionReason": reason,
             "additionalContext": context,
         },
     }
@@ -96,12 +112,19 @@ def write_post_warn(reason: str, context: str = "") -> None:
 
 
 def fail_closed(func):
-    """Decorator: on any exception, emit deny and return. Never re-raises."""
+    """Decorator: on any exception, emit deny and return. Never re-raises.
+
+    Note: always emits hookEventName='PreToolUse' regardless of actual event.
+    This is a known limitation — wrong event name in output is a minor schema
+    issue but the deny still fires correctly.
+    """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except Exception:
+        except Exception as e:
+            print(f"[aiclair] {func.__name__} crashed: {type(e).__name__}: {e}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
             write_deny("Internal error - fail closed")
             return None
     return wrapper
