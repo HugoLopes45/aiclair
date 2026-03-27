@@ -1,0 +1,9 @@
+{
+  "name": "<hook-name>",
+  "version": "1.0.0",
+  "description": "<What this hook does in one sentence>",
+  "author": "<your-github-username>",
+  "license": "MIT",
+  "events": ["UserPromptSubmit"],
+  "agents": ["claude-code"]
+}

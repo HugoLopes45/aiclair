@@ -1,0 +1,10 @@
+{
+  "name": "prompt-improver",
+  "version": "1.0.0",
+  "description": "Evaluates prompt clarity and enriches vague prompts with targeted research and questions",
+  "author": "aiclair",
+  "license": "MIT",
+  "events": ["UserPromptSubmit"],
+  "agents": ["claude-code"],
+  "skill": "./SKILL.md"
+}

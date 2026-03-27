@@ -1,0 +1,9 @@
+{
+  "name": "secret-guard",
+  "version": "1.0.0",
+  "description": "Prevents API keys and secrets from leaking via file writes or Bash commands",
+  "author": "aiclair",
+  "license": "MIT",
+  "events": ["PreToolUse", "PostToolUse"],
+  "agents": ["claude-code"]
+}

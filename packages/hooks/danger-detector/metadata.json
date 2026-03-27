@@ -1,0 +1,9 @@
+{
+  "name": "danger-detector",
+  "version": "1.0.0",
+  "description": "Blocks destructive Bash commands before execution",
+  "author": "aiclair",
+  "license": "MIT",
+  "events": ["PreToolUse"],
+  "agents": ["claude-code"]
+}
