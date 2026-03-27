@@ -171,3 +171,27 @@ def test_universal_bypass_multi_turn_no_stale():
         _user_tool_result_entry(),
     )
     assert check_universal_bypass(transcript) is False
+
+
+def test_truncation_guard_exact_8192_file_not_discarded():
+    """Transcript exactly 8192 bytes — bypass entry is last line, must be found."""
+    import os
+    # Build a bypass entry as the last line
+    entry = json.dumps(_user_text_entry("* go")) + "\n"
+    entry_b = entry.encode("utf-8")
+    # Pad preceding content to reach exactly 8192 bytes total
+    pad_prefix = b'{"p":"'
+    pad_suffix = b'"}\n'
+    pad_content = b"x" * (8192 - len(entry_b) - len(pad_prefix) - len(pad_suffix))
+    pad_line = pad_prefix + pad_content + pad_suffix
+
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='wb', suffix='.jsonl', delete=False) as f:
+        f.write(pad_line)
+        f.write(entry_b)
+        path = f.name
+
+    assert os.path.getsize(path) == 8192
+    # File is exactly 8192 bytes — old code would discard the bypass entry (off-by-one bug),
+    # fixed code uses file_size > 8192 so nothing is discarded.
+    assert check_universal_bypass(path) is True

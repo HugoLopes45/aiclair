@@ -12,6 +12,7 @@ Universal bypass (transcript-based):
 """
 import json
 import re
+import sys
 from pathlib import Path
 
 
@@ -72,15 +73,21 @@ def check_universal_bypass(transcript_path: str) -> bool:
         path = Path(transcript_path)
         if not path.exists():
             return False
-        raw = path.read_bytes()[-8192:]
-        lines = raw.decode("utf-8", errors="replace").splitlines()
+        # Read all bytes first, then slice — avoids TOCTOU between stat() and read
+        raw_full = path.read_bytes()
+        if len(raw_full) > 8192:
+            raw = raw_full[-8192:]
+            lines = raw.decode("utf-8", errors="replace").splitlines()
+            lines = lines[1:]  # discard partial first line
+        else:
+            lines = raw_full.decode("utf-8", errors="replace").splitlines()
         for line in reversed(lines):
             line = line.strip()
             if not line:
                 continue
             try:
                 entry = json.loads(line)
-            except Exception:
+            except json.JSONDecodeError:
                 continue
             # Real transcript format: {"type": "user", "message": {"role": "user", "content": [...]}}
             message = entry.get("message", {})
@@ -94,6 +101,9 @@ def check_universal_bypass(transcript_path: str) -> bool:
                 continue
             text = first.get("text", "")
             return text.strip().startswith("* ")
-    except Exception:
+    except (PermissionError, OSError) as e:
+        print(f"[aiclair] check_universal_bypass: cannot read transcript: {e}", file=sys.stderr)
         return False
-    return False
+    except Exception as e:
+        print(f"[aiclair] check_universal_bypass: unexpected error: {e}", file=sys.stderr)
+        return False
