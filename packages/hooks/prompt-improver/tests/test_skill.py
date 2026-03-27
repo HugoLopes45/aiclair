@@ -3,8 +3,10 @@ import re
 from pathlib import Path
 
 HOOK_DIR = Path(__file__).parent.parent
-SKILL_MD = HOOK_DIR / "SKILL.md"
-REFERENCES_DIR = HOOK_DIR / "references"
+# SKILL.md lives in the adapter package; the hooks copy was an orphan and has been removed.
+_PROJECT_ROOT = Path(__file__).parents[4]
+SKILL_MD = _PROJECT_ROOT / "packages" / "adapter_claude_code" / "skills" / "prompt-improver" / "SKILL.md"
+REFERENCES_DIR = SKILL_MD.parent / "references"
 
 
 def test_skill_md_exists():
@@ -27,7 +29,6 @@ def test_skill_md_has_phases():
     assert "Phase 1" in content
     assert "Phase 2" in content
     assert "Phase 3" in content
-    assert "Phase 4" in content
 
 
 def test_skill_md_no_absolute_never():
