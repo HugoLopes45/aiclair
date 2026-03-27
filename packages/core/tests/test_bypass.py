@@ -1,6 +1,41 @@
 """Tests for bypass prefix detection."""
+import json
+import tempfile
+from pathlib import Path
+
 import pytest
-from packages.core.bypass import check_bypass, _is_slash_command
+from packages.core.bypass import check_bypass, _is_slash_command, check_universal_bypass
+
+
+# --- Helpers ---
+
+def _make_transcript(*entries) -> str:
+    """Write JSONL entries to a temp file, return the path."""
+    f = tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False)
+    for entry in entries:
+        f.write(json.dumps(entry) + "\n")
+    f.close()
+    return f.name
+
+
+def _user_text_entry(text: str) -> dict:
+    return {
+        "type": "user",
+        "message": {
+            "role": "user",
+            "content": [{"type": "text", "text": text}],
+        },
+    }
+
+
+def _user_tool_result_entry() -> dict:
+    return {
+        "type": "user",
+        "message": {
+            "role": "user",
+            "content": [{"type": "tool_result", "tool_use_id": "abc", "content": "done"}],
+        },
+    }
 
 
 # --- Positive bypass cases ---
@@ -85,3 +120,54 @@ def test_slash_with_dot_does_not_bypass():
 
 def test_slash_with_multiple_slashes_does_not_bypass():
     assert _is_slash_command("/usr/bin/python") is False
+
+
+# --- check_universal_bypass tests ---
+
+def test_universal_bypass_with_star_prefix():
+    transcript = _make_transcript(_user_text_entry("* fix it"))
+    assert check_universal_bypass(transcript) is True
+
+
+def test_universal_bypass_no_star():
+    transcript = _make_transcript(_user_text_entry("fix it"))
+    assert check_universal_bypass(transcript) is False
+
+
+def test_universal_bypass_empty_path():
+    assert check_universal_bypass("") is False
+
+
+def test_universal_bypass_missing_file():
+    assert check_universal_bypass("/tmp/does_not_exist_aiclair_xyz.jsonl") is False
+
+
+def test_universal_bypass_checks_last_message_only():
+    # Old message has "* ", new one does not — must return False
+    transcript = _make_transcript(
+        _user_text_entry("* do something"),
+        _user_text_entry("now do something else"),
+    )
+    assert check_universal_bypass(transcript) is False
+
+
+def test_universal_bypass_skips_tool_result_entries():
+    # Last user entry is tool_result; the entry before is "* text" — must return True
+    transcript = _make_transcript(
+        _user_text_entry("* fix it"),
+        _user_tool_result_entry(),
+    )
+    assert check_universal_bypass(transcript) is True
+
+
+def test_universal_bypass_multi_turn_no_stale():
+    # Turn 1: "* bypass" + tool_result
+    # Turn 2: "normal prompt" + tool_result
+    # Last text entry = "normal prompt" (no * ) → must return False
+    transcript = _make_transcript(
+        _user_text_entry("* do something"),
+        _user_tool_result_entry(),
+        _user_text_entry("now do something else"),
+        _user_tool_result_entry(),
+    )
+    assert check_universal_bypass(transcript) is False

@@ -38,20 +38,17 @@ def build_evaluation_wrapper(prompt: str, skill_name: str) -> str:
     embedded = json.dumps(prompt, ensure_ascii=False)
     return f"""PROMPT EVALUATION
 
-Original user request: {embedded}
+Request: {embedded}
 
-EVALUATE: Is this prompt clear enough to execute, or does it need enrichment?
+EVALUATE: Score Clarity/Specificity/Context (1-10). Classify intent: CREATE|TRANSFORM|REASON|DEBUG|AGENTIC.
 
-PROCEED IMMEDIATELY if:
-- Detailed/specific OR you have sufficient context OR can infer intent
+PROCEED if the prompt is specific enough to act on without ambiguity.
 
-ONLY USE SKILL if genuinely vague (e.g., "fix the bug" with no context):
-- If vague:
-  1. Preface with: "Hey! Prompt Improver flagged your prompt as vague because [specific reason]."
-  2. Then use the {skill_name} skill to research and generate clarifying questions
-- Check conversation history before invoking the skill.
+INVOKE {skill_name} skill only if genuinely vague:
+1. State: "Prompt Improver flagged this as vague: [reason]."
+2. Use skill to research, ask 1-6 targeted questions, suggest rewritten prompt.
 
-If clear, proceed. If vague, invoke the skill."""
+Check conversation history before invoking."""
 
 
 def read_tool_input() -> dict:

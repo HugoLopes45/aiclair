@@ -107,3 +107,20 @@ def test_fail_closed_catches_exception(capsys):
     data = json.loads(captured.out.strip())
     assert data["hookSpecificOutput"]["permissionDecision"] == "deny"
     assert "fail closed" in data["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+def test_evaluation_wrapper_contains_intent_types():
+    wrapper = build_evaluation_wrapper("fix the bug", "prompt-improver")
+    intents = ["CREATE", "TRANSFORM", "REASON", "DEBUG", "AGENTIC"]
+    assert any(intent in wrapper for intent in intents)
+
+
+def test_evaluation_wrapper_contains_scoring_dimensions():
+    wrapper = build_evaluation_wrapper("build a feature", "prompt-improver")
+    dimensions = ["Clarity", "Specificity", "Context"]
+    assert any(dim in wrapper for dim in dimensions)
+
+
+def test_evaluation_wrapper_token_limit_with_intent():
+    wrapper = build_evaluation_wrapper("add logging", "prompt-improver")
+    assert len(wrapper) // 4 < 250
