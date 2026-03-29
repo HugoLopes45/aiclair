@@ -1,8 +1,8 @@
 # aiclair
 
-![CI](https://github.com/aiclair-community/aiclair/actions/workflows/validate.yml/badge.svg)
+![CI](https://github.com/HugoLopes45/aiclair/actions/workflows/validate.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-MIT%20%2B%20Commons%20Clause-orange)
 ![Version](https://img.shields.io/badge/version-1.1.0-blue)
 
 Safety guardrails for Claude Code — stop accidental data loss, secret leaks, and dangerous commands before they execute.
@@ -22,17 +22,17 @@ No pip install. No build step. Pure Python stdlib.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/aiclair-community/aiclair/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/HugoLopes45/aiclair/main/install.sh | bash
 ```
 
 Pick which hooks to install interactively, or use flags:
 
 ```bash
 # Install everything
-curl -fsSL https://raw.githubusercontent.com/aiclair-community/aiclair/main/install.sh | bash -s -- --all
+curl -fsSL https://raw.githubusercontent.com/HugoLopes45/aiclair/main/install.sh | bash -s -- --all
 
 # Install specific hooks
-curl -fsSL https://raw.githubusercontent.com/aiclair-community/aiclair/main/install.sh | bash -s -- --hooks "danger-detector secret-guard"
+curl -fsSL https://raw.githubusercontent.com/HugoLopes45/aiclair/main/install.sh | bash -s -- --hooks "danger-detector secret-guard"
 ```
 
 **Uninstall:**
@@ -104,14 +104,14 @@ Allow specific patterns that danger-detector would otherwise block. Create `.aic
 }
 ```
 
-Any command containing an allowed pattern passes through without checking.
+Allowed patterns are stripped from the command before checking — the rest of the command is still scanned. `rm -rf node_modules && rm -rf /` with `allow_patterns: ["rm -rf node_modules"]` will still be blocked.
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a hook, run tests, and open a PR.
 
-Hook ideas, false positives, and bug reports: [open an issue](https://github.com/aiclair-community/aiclair/issues/new/choose).
+Hook ideas, false positives, and bug reports: [open an issue](https://github.com/HugoLopes45/aiclair/issues/new/choose).
 
 ## License
 
-MIT
+MIT + Commons Clause — free to use, modify, and distribute. Commercial resale is not permitted. See [LICENSE](LICENSE).
