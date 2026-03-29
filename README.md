@@ -19,6 +19,8 @@ aiclair adds three hooks that run silently on every prompt and tool call. They b
 
 No pip install. No build step. Pure Python stdlib.
 
+![aiclair demo](demo/aiclair-demo.gif)
+
 ## Install
 
 ```bash
