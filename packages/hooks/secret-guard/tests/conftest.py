@@ -47,8 +47,11 @@ def make_transcript_with_tag(tag: str) -> str:
     """Create a temp transcript file with a user message containing the tag."""
     import json as _json
     entry = _json.dumps({
-        "role": "user",
-        "content": [{"type": "text", "text": f"do the thing {tag}"}]
+        "type": "user",
+        "message": {
+            "role": "user",
+            "content": [{"type": "text", "text": f"do the thing {tag}"}],
+        },
     })
     f = tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False)
     f.write(entry + "\n")

@@ -74,3 +74,49 @@ def test_universal_bypass_allows_post_tool_use():
     output = run_post_hook("Found key: AKIAIOSFODNN7EXAMPLE in output", transcript_path=transcript)
     assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
     assert output["hookSpecificOutput"]["hookEventName"] == "PostToolUse"
+
+
+def test_fix_l2_make_transcript_with_tag_wrapper_structure():
+    """L2: make_transcript_with_tag must produce the correct {type/message} wrapper for bypass detection."""
+    from conftest import make_transcript_with_tag
+    import json
+    from pathlib import Path
+    transcript_path = make_transcript_with_tag("# remember this")
+    lines = Path(transcript_path).read_text().strip().splitlines()
+    entry = json.loads(lines[-1])
+    assert "type" in entry, f"missing 'type' key — got: {entry}"
+    assert "message" in entry, f"missing 'message' key — got: {entry}"
+    assert entry["type"] == "user"
+    assert entry["message"]["role"] == "user"
+
+
+def test_fix_l1_lowercase_api_key_blocked():
+    """L1: lowercase variable names like api_key=... must be caught by generic-api-key pattern."""
+    output = run_pre_hook("Write", {"file_path": "config.py", "content": "api_key = 'sk-abc123def456ghi789jkl0'"})
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_fix_m4_tool_response_string_does_not_crash():
+    """M4: tool_response as a string (not dict) must not raise AttributeError.
+    Hook must handle it gracefully (allow or block) — not produce a PreToolUse deny for a PostToolUse event."""
+    import json, subprocess, sys
+    stdin_data = json.dumps({
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Bash",
+        "tool_input": {"command": "echo hi"},
+        "tool_response": "some raw string output",
+        "cwd": "/tmp",
+        "session_id": "test",
+        "transcript_path": "",
+    })
+    result = subprocess.run(
+        [sys.executable, str(HOOK_SCRIPT)],
+        input=stdin_data, capture_output=True, text=True
+    )
+    assert result.stdout.strip(), f"hook crashed with empty stdout; stderr: {result.stderr}"
+    output = json.loads(result.stdout)
+    hso = output["hookSpecificOutput"]
+    # Must emit PostToolUse event name — not a PreToolUse deny triggered by @fail_closed crash
+    assert hso.get("hookEventName") == "PostToolUse", (
+        f"Got wrong hookEventName: {hso.get('hookEventName')} — likely crashed into @fail_closed"
+    )

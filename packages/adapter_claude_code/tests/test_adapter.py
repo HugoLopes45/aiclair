@@ -140,3 +140,68 @@ def test_secret_guard_end_to_end():
     )
     output = _json.loads(result.stdout)
     assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+# C1–C4: spec=None dereference — adapters must fail-closed when hook path is invalid
+
+
+def _run_adapter_with_bad_root(hook_filename: str, stdin_data: str) -> "subprocess.CompletedProcess":
+    import subprocess, sys
+    return subprocess.run(
+        [sys.executable, str(ADAPTER_DIR / "hooks" / hook_filename)],
+        input=stdin_data,
+        capture_output=True,
+        text=True,
+        env={**__import__("os").environ, "CLAUDE_PLUGIN_ROOT": "/nonexistent/path/that/does/not/exist"},
+    )
+
+
+def test_fix_c1_improve_prompt_bad_root_emits_valid_json():
+    """C1: improve-prompt.py must emit valid JSON (not crash) when hook path is invalid."""
+    import json as _json
+    result = _run_adapter_with_bad_root("improve-prompt.py", _json.dumps({"prompt": "hello"}))
+    assert result.stdout.strip(), "expected JSON output, got empty stdout (crash)"
+    output = _json.loads(result.stdout)
+    assert "hookSpecificOutput" in output
+
+
+def test_fix_c2_danger_detector_bad_root_denies():
+    """C2: danger-detector.py must deny (not fail open) when hook path is invalid."""
+    import json as _json
+    stdin_data = _json.dumps({
+        "hook_event_name": "PreToolUse", "tool_name": "Bash",
+        "tool_input": {"command": "echo hi"}, "cwd": "/tmp",
+        "session_id": "test", "transcript_path": ""
+    })
+    result = _run_adapter_with_bad_root("danger-detector.py", stdin_data)
+    assert result.stdout.strip(), "expected JSON output, got empty stdout (crash)"
+    output = _json.loads(result.stdout)
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_fix_c3_secret_guard_pre_bad_root_denies():
+    """C3: secret-guard-pre.py must deny when hook path is invalid."""
+    import json as _json
+    stdin_data = _json.dumps({
+        "hook_event_name": "PreToolUse", "tool_name": "Write",
+        "tool_input": {"file_path": "x.py", "content": "x=1"}, "cwd": "/tmp",
+        "session_id": "test", "transcript_path": ""
+    })
+    result = _run_adapter_with_bad_root("secret-guard-pre.py", stdin_data)
+    assert result.stdout.strip(), "expected JSON output, got empty stdout (crash)"
+    output = _json.loads(result.stdout)
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_fix_c4_secret_guard_post_bad_root_denies():
+    """C4: secret-guard-post.py must deny when hook path is invalid."""
+    import json as _json
+    stdin_data = _json.dumps({
+        "hook_event_name": "PostToolUse", "tool_name": "Bash",
+        "tool_input": {}, "tool_response": {"stdout": ""},
+        "cwd": "/tmp", "session_id": "test", "transcript_path": ""
+    })
+    result = _run_adapter_with_bad_root("secret-guard-post.py", stdin_data)
+    assert result.stdout.strip(), "expected JSON output, got empty stdout (crash)"
+    output = _json.loads(result.stdout)
+    assert output["hookSpecificOutput"]["permissionDecision"] in ("deny", "block")

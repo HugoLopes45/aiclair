@@ -17,18 +17,40 @@ BLOCK_PATTERNS = [
 
 def unwrap(command: str) -> str:
     """Extract inner command from bash -c '...' / python3 -c '...' / eval '...'"""
-    # Match double-quoted or single-quoted argument, not crossing the same quote type
-    m = re.search(r'''(?:bash|sh|python3?|eval)\s+-?c\s+(?:"([^"]+)"|'([^']+)')''', command)
+    # Allow \\" inside double-quoted and \\' inside single-quoted arguments
+    m = re.search(r'''(?:bash|sh|python3?|eval)\s+-?c\s+(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')''', command)
     if m:
         return m.group(1) if m.group(1) is not None else m.group(2)
     return command
 
 
 def extract_subshells(command: str) -> list:
-    """Extract contents of $(...) and backtick subshell substitutions."""
+    """Extract contents of $(...) and backtick subshell substitutions, iteratively.
+
+    Handles nested subshells by rescanning each extracted content for inner $() patterns.
+    """
     results = []
-    # $(...) form — non-greedy, non-nested
-    results.extend(re.findall(r'\$\(([^)]+)\)', command))
-    # backtick form
-    results.extend(re.findall(r'`([^`]+)`', command))
+    queue = [command]
+    seen = {command}
+    while queue:
+        current = queue.pop()
+        # $(...) form — single-level extraction per pass
+        for match in re.findall(r'\$\(([^)]+)\)', current):
+            if match not in seen:
+                results.append(match)
+                seen.add(match)
+                queue.append(match)
+        # Detect truncated nested $(...) left by outer ) consumption: scan for $( in extracted strings
+        for m in re.finditer(r'\$\((.+)', current):
+            inner = m.group(1).rstrip(')')
+            if inner and inner not in seen:
+                results.append(inner)
+                seen.add(inner)
+                queue.append(inner)
+        # backtick form
+        for match in re.findall(r'`([^`]+)`', current):
+            if match not in seen:
+                results.append(match)
+                seen.add(match)
+                queue.append(match)
     return results

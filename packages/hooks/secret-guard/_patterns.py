@@ -21,7 +21,7 @@ SECRET_PATTERNS = [
     },
     {
         "id": "generic-api-key",
-        "regex": re.compile(r'\b[A-Z_]*(SECRET|PASSWORD|TOKEN|API_KEY)[A-Z_0-9]*\s*=\s*(\S{8,})'),
+        "regex": re.compile(r'\b[A-Za-z_]*(SECRET|PASSWORD|TOKEN|API_KEY)[A-Za-z_0-9]*\s*=\s*(\S{8,})', re.IGNORECASE),
         "secret_group": 2,
         "entropy_threshold": 3.5,
         "message": "High-entropy API key/secret detected",

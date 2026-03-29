@@ -42,7 +42,8 @@ def main():
         write_post_allow() if event == "PostToolUse" else write_allow()
         return
     if event == "PostToolUse":
-        stdout = data.get("tool_response", {}).get("stdout", "") or ""
+        tool_response = data.get("tool_response")
+        stdout = (tool_response.get("stdout", "") if isinstance(tool_response, dict) else "") or ""
         found, msg = scan_for_secrets(stdout)
         if found:
             write_post_warn(msg, "Secret detected in command output — review before using this value")

@@ -43,10 +43,14 @@ def load_allow_patterns(cwd: str) -> list:
         return []
 
 def detect(command: str, cwd: str) -> tuple:
+    # Strip each allow-pattern from the command rather than allowing the whole command.
+    # This prevents bypassing detection by prefixing a destructive command with an allowed substring.
+    effective = command
     for pattern in load_allow_patterns(cwd):
-        if pattern in command:
-            return (False, "")
-    targets = list(dict.fromkeys([command, unwrap(command)] + extract_subshells(command)))
+        effective = effective.replace(pattern, "")
+    if not effective.strip():
+        return (False, "")
+    targets = list(dict.fromkeys([effective, unwrap(effective)] + extract_subshells(effective)))
     # Guard against ReDoS: skip targets that are empty or excessively long
     targets = [t for t in targets if t and len(t) <= 4096]
     for target in targets:

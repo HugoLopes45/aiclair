@@ -125,3 +125,42 @@ def test_backtick_rm_rf_blocked():
 def test_fork_bomb_nested_braces_blocked():
     output = run_hook(":() { { :|: ; } }; :")
     assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_fix_m3_allow_pattern_substring_bypass_blocked():
+    """M3: allow-pattern substring must not bypass detection when appended to a destructive command."""
+    # 'rm -rf node_modules' is in allow_patterns, but the command also contains 'rm -rf /'
+    config = {"danger_detector": {"allow_patterns": ["rm -rf node_modules"]}}
+    output = run_hook("rm -rf node_modules && rm -rf /", aiclair_config=config)
+    assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_fix_m2_nested_subshell_extracted_recursively():
+    """M2: extract_subshells must iteratively extract all nesting levels."""
+    import importlib.util
+    helpers_path = Path(__file__).parent.parent / "_helpers.py"
+    spec = importlib.util.spec_from_file_location("_helpers", helpers_path)
+    helpers = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helpers)
+    # Inner subshell content is only accessible after stripping outer $()
+    # echo $(x $(rm -rf /)) — outer extract: "x $(rm -rf /" → inner: "rm -rf /"
+    # With iterative extraction, "rm -rf /" should appear as a separate extracted target
+    subshells = helpers.extract_subshells("echo $(x $(rm -rf /))")
+    # Must include the fully-stripped inner content as a separate entry
+    assert any("rm -rf" in s and not s.startswith("x ") for s in subshells), (
+        f"inner subshell 'rm -rf /' not extracted separately, got: {subshells}"
+    )
+
+
+def test_fix_m1_escaped_quote_in_bash_c_blocked():
+    """M1: unwrap() must not truncate at backslash-escaped quote inside double-quoted bash -c arg."""
+    import importlib.util
+    helpers_path = Path(__file__).parent.parent / "_helpers.py"
+    spec = importlib.util.spec_from_file_location("_helpers", helpers_path)
+    helpers = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helpers)
+    # Command arriving after JSON decode: bash -c "echo \"danger\" && rm -rf /tmp"
+    # [^"]+ stops at the backslash-quote, returning 'echo \' instead of the full inner command.
+    cmd = 'bash -c "echo \\"danger\\" && rm -rf /tmp"'
+    result = helpers.unwrap(cmd)
+    assert "rm -rf" in result, f"unwrap truncated at escaped quote, got: {repr(result)}"

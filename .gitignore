@@ -153,3 +153,6 @@ aidd_docs/
 
 # Local adapter test outputs
 *.hook-output.json
+
+# Hunt/debug artifacts
+.brio/
