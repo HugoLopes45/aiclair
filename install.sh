@@ -44,7 +44,7 @@ if [ -d "$INSTALL_DIR/.git" ]; then
   git -C "$INSTALL_DIR" pull --ff-only
 else
   echo "Installing aiclair to $INSTALL_DIR..."
-  git clone https://github.com/aiclair-community/aiclair "$INSTALL_DIR"
+  git clone https://github.com/HugoLopes45/aiclair "$INSTALL_DIR"
 fi
 
 # ── python check ─────────────────────────────────────────────────────────────
