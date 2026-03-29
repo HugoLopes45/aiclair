@@ -41,7 +41,7 @@ def extract_subshells(command: str) -> list:
                 seen.add(match)
                 queue.append(match)
         # Detect truncated nested $(...) left by outer ) consumption: scan for $( in extracted strings
-        for m in re.finditer(r'\$\((.+)', current):
+        for m in re.finditer(r'\$\((.{1,4096})', current):
             inner = m.group(1).rstrip(')')
             if inner and inner not in seen:
                 results.append(inner)
